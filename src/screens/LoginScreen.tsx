@@ -1,5 +1,6 @@
 import { useState } from "react";
 import { Screen, TipoUsuario } from "../App";
+import { supabase } from "../services/supabaseClient"; // Ajusta la ruta a tu archivo supabaseClient si es diferente
 
 type Props = {
   goTo: (s: Screen) => void;
@@ -14,6 +15,65 @@ export default function LoginScreen({
 }: Props) {
   const [correo, setCorreo] = useState("");
   const [contrasena, setContrasena] = useState("");
+  const [loading, setLoading] = useState(false);
+  const [errorMessage, setErrorMessage] = useState<string | null>(null);
+
+  const handleLogin = async () => {
+    setErrorMessage(null);
+
+    if (!correo || !contrasena) {
+      setErrorMessage("Por favor, completa todos los campos.");
+      return;
+    }
+
+    setLoading(true);
+
+    try {
+      // 1. Iniciar sesión en Supabase Auth
+      const { data: authData, error: authError } =
+        await supabase.auth.signInWithPassword({
+          email: correo,
+          password: contrasena,
+        });
+
+      if (authError) {
+        throw new Error("Credenciales incorrectas. Verifica tu correo y contraseña.");
+      }
+
+      if (authData.user) {
+        // 2. Verificar el perfil y rol del usuario en la base de datos
+        const { data: profile, error: profileError } = await supabase
+          .from("profiles")
+          .select("role")
+          .eq("id", authData.user.id)
+          .single();
+
+        if (profileError) {
+          throw new Error("No se pudo obtener la información de perfil.");
+        }
+
+        // Mapear 'estudiante' a 'candidato' como está en el enum de PostgreSQL
+        const rolEsperado = tipoUsuario === "estudiante" ? "candidato" : "empresa";
+
+        if (profile.role !== rolEsperado) {
+          // Cerrar la sesión iniciada automáticamente si se equivoca de tipo de portal
+          await supabase.auth.signOut();
+          throw new Error(
+            `Esta cuenta está registrada como ${profile.role}. Por favor cambia la pestaña a "Soy ${
+              profile.role === "candidato" ? "estudiante" : "empresa"
+            }".`
+          );
+        }
+
+        // 3. Redirección exitosa
+        goTo("home");
+      }
+    } catch (err: any) {
+      setErrorMessage(err.message || "Ocurrió un error inesperado.");
+    } finally {
+      setLoading(false);
+    }
+  };
 
   return (
     <div className="flex-1 flex flex-col bg-white">
@@ -43,7 +103,10 @@ export default function LoginScreen({
           {(["estudiante", "empresa"] as TipoUsuario[]).map((tipo) => (
             <button
               key={tipo}
-              onClick={() => setTipoUsuario(tipo)}
+              onClick={() => {
+                setTipoUsuario(tipo);
+                setErrorMessage(null);
+              }}
               className={`rounded-xl py-3 text-sm font-semibold transition-all ${
                 tipoUsuario === tipo
                   ? "bg-white text-[#6C3FA0] shadow-sm"
@@ -54,6 +117,13 @@ export default function LoginScreen({
             </button>
           ))}
         </div>
+
+        {/* Mensaje de error dinámico */}
+        {errorMessage && (
+          <div className="mb-5 p-3.5 bg-red-50 border border-red-200 rounded-xl text-xs text-red-600 font-medium">
+            {errorMessage}
+          </div>
+        )}
 
         <div className="flex flex-col gap-5">
           <div>
@@ -138,10 +208,11 @@ export default function LoginScreen({
         </div>
 
         <button
-          onClick={() => goTo("home")}
-          className="w-full mt-7 bg-gradient-to-r from-[#6C3FA0] to-[#9B6FD0] text-white font-semibold py-3.5 rounded-2xl text-sm hover:opacity-90 active:scale-95 transition-all shadow-lg shadow-purple-200"
+          onClick={handleLogin}
+          disabled={loading}
+          className="w-full mt-7 bg-gradient-to-r from-[#6C3FA0] to-[#9B6FD0] text-white font-semibold py-3.5 rounded-2xl text-sm hover:opacity-90 active:scale-95 transition-all shadow-lg shadow-purple-200 disabled:opacity-50 disabled:scale-100"
         >
-          Iniciar sesión
+          {loading ? "Cargando..." : "Iniciar sesión"}
         </button>
 
         <p className="text-center text-xs text-gray-400 mt-5">
