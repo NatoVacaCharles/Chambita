@@ -1,6 +1,6 @@
 import { useState } from "react";
 import { Screen, TipoUsuario } from "../App";
-import { supabase } from "../services/supabaseClient"; // Ajusta la ruta a tu archivo supabaseClient si es diferente
+import { supabase } from "../services/supabaseClient";
 
 type Props = {
   goTo: (s: Screen) => void;
@@ -15,6 +15,7 @@ export default function LoginScreen({
 }: Props) {
   const [correo, setCorreo] = useState("");
   const [contrasena, setContrasena] = useState("");
+  const [mostrarContrasena, setMostrarContrasena] = useState(false); // Estado para alternar visibilidad
   const [loading, setLoading] = useState(false);
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
 
@@ -36,10 +37,16 @@ export default function LoginScreen({
           password: contrasena,
         });
 
-      if (authError) {
+      /*if (authError) {
         throw new Error("Credenciales incorrectas. Verifica tu correo y contraseña.");
+      }*/
+     // Reemplaza esta parte en LoginScreen.tsx
+      if (authError) {
+        console.error("Error completo de Supabase Auth:", authError);
+        throw new Error(`Auth Error: ${authError.message}`);
       }
 
+      /*
       if (authData.user) {
         // 2. Verificar el perfil y rol del usuario en la base de datos
         const { data: profile, error: profileError } = await supabase
@@ -52,11 +59,9 @@ export default function LoginScreen({
           throw new Error("No se pudo obtener la información de perfil.");
         }
 
-        // Mapear 'estudiante' a 'candidato' como está en el enum de PostgreSQL
         const rolEsperado = tipoUsuario === "estudiante" ? "candidato" : "empresa";
 
         if (profile.role !== rolEsperado) {
-          // Cerrar la sesión iniciada automáticamente si se equivoca de tipo de portal
           await supabase.auth.signOut();
           throw new Error(
             `Esta cuenta está registrada como ${profile.role}. Por favor cambia la pestaña a "Soy ${
@@ -65,9 +70,54 @@ export default function LoginScreen({
           );
         }
 
-        // 3. Redirección exitosa
+        // 3. Redirección exitosa según el rol
         goTo("home");
       }
+        */
+       if (authData.user) {
+  console.log("1. Autenticación exitosa");
+  console.log("UUID del usuario:", authData.user.id);
+
+  const { data: profile, error: profileError } =
+    await supabase
+      .from("profiles")
+      .select("id, role")
+      .eq("id", authData.user.id)
+      .maybeSingle();
+
+  if (profileError) {
+    console.error("Error consultando profiles:", {
+      message: profileError.message,
+      code: profileError.code,
+      details: profileError.details,
+      hint: profileError.hint,
+    });
+
+    throw new Error(
+      `Error al consultar el perfil: ${profileError.message}`
+    );
+  }
+
+  if (!profile) {
+    throw new Error(
+      "El usuario inició sesión, pero no tiene un perfil asociado."
+    );
+  }
+
+  console.log("2. Perfil encontrado:", profile);
+  console.log("3. Rol registrado:", profile.role);
+
+  const rolEsperado =
+    tipoUsuario === "estudiante" ? "candidato" : "empresa";
+
+  if (profile.role !== rolEsperado) {
+    throw new Error(
+      `Rol esperado: ${rolEsperado}. Rol encontrado: ${profile.role}`
+    );
+  }
+
+  goTo("home");
+}
     } catch (err: any) {
       setErrorMessage(err.message || "Ocurrió un error inesperado.");
     } finally {
@@ -118,7 +168,6 @@ export default function LoginScreen({
           ))}
         </div>
 
-        {/* Mensaje de error dinámico */}
         {errorMessage && (
           <div className="mb-5 p-3.5 bg-red-50 border border-red-200 rounded-xl text-xs text-red-600 font-medium">
             {errorMessage}
@@ -194,12 +243,49 @@ export default function LoginScreen({
                 />
               </svg>
               <input
-                type="password"
+                type={mostrarContrasena ? "text" : "password"}
                 value={contrasena}
                 onChange={(event) => setContrasena(event.target.value)}
                 placeholder="••••••••"
                 className="min-w-0 flex-1 bg-transparent text-sm text-[#1a0a2e] placeholder-gray-300 outline-none"
               />
+              {/* Botón Ojito */}
+              <button
+                type="button"
+                onClick={() => setMostrarContrasena(!mostrarContrasena)}
+                className="text-gray-400 hover:text-[#6C3FA0] transition-colors focus:outline-none"
+              >
+                {mostrarContrasena ? (
+                  // Ícono Ojo Cerrado / Tachado
+                  <svg width="20" height="20" fill="none" viewBox="0 0 24 24">
+                    <path
+                      d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"
+                      stroke="currentColor"
+                      strokeWidth="1.7"
+                      strokeLinecap="round"
+                      strokeLinejoin="round"
+                    />
+                    <circle
+                      cx="12"
+                      cy="12"
+                      r="3"
+                      stroke="currentColor"
+                      strokeWidth="1.7"
+                    />
+                  </svg>
+                ) : (
+                  // Ícono Ojo Abierto
+                  <svg width="20" height="20" fill="none" viewBox="0 0 24 24">
+                    <path
+                      d="M2 2l20 20M9.88 9.88a3 3 0 1 0 4.24 4.24M10.73 5.08A10.43 10.43 0 0 1 12 5c7 0 10 7 10 7a13.16 13.16 0 0 1-1.67 2.68M6.61 6.61A13.52 13.52 0 0 0 2 12s3 7 10 7a9.74 9.74 0 0 0 5.39-1.61"
+                      stroke="currentColor"
+                      strokeWidth="1.7"
+                      strokeLinecap="round"
+                      strokeLinejoin="round"
+                    />
+                  </svg>
+                )}
+              </button>
             </div>
             <button className="mt-2 ml-auto block text-xs font-medium text-[#6C3FA0]">
               ¿Olvidaste tu contraseña?
