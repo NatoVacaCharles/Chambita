@@ -75,49 +75,43 @@ export default function LoginScreen({
       }
         */
        if (authData.user) {
-  console.log("1. Autenticación exitosa");
-  console.log("UUID del usuario:", authData.user.id);
+          const { data: profile, error: profileError } =
+            await supabase
+              .from("profiles")
+              .select("id, role")
+              .eq("id", authData.user.id)
+              .maybeSingle();
 
-  const { data: profile, error: profileError } =
-    await supabase
-      .from("profiles")
-      .select("id, role")
-      .eq("id", authData.user.id)
-      .maybeSingle();
+          if (profileError) {
+            console.error("Error consultando profiles:", {
+              message: profileError.message,
+              code: profileError.code,
+              details: profileError.details,
+              hint: profileError.hint,
+            });
 
-  if (profileError) {
-    console.error("Error consultando profiles:", {
-      message: profileError.message,
-      code: profileError.code,
-      details: profileError.details,
-      hint: profileError.hint,
-    });
+            throw new Error(
+              `Error al consultar el perfil: ${profileError.message}`
+            );
+          }
 
-    throw new Error(
-      `Error al consultar el perfil: ${profileError.message}`
-    );
-  }
+          if (!profile) {
+            throw new Error(
+              "El usuario inició sesión, pero no tiene un perfil asociado."
+            );
+          }
 
-  if (!profile) {
-    throw new Error(
-      "El usuario inició sesión, pero no tiene un perfil asociado."
-    );
-  }
+          const rolEsperado =
+            tipoUsuario === "estudiante" ? "candidato" : "empresa";
 
-  console.log("2. Perfil encontrado:", profile);
-  console.log("3. Rol registrado:", profile.role);
+          if (profile.role !== rolEsperado) {
+            throw new Error(
+              `No se encontró su perfil en este rol. Por favor, cambie al otro.`
+            );
+          }
 
-  const rolEsperado =
-    tipoUsuario === "estudiante" ? "candidato" : "empresa";
-
-  if (profile.role !== rolEsperado) {
-    throw new Error(
-      `Rol esperado: ${rolEsperado}. Rol encontrado: ${profile.role}`
-    );
-  }
-
-  goTo("home");
-}
+          goTo("home");
+        }
     } catch (err: any) {
       setErrorMessage(err.message || "Ocurrió un error inesperado.");
     } finally {

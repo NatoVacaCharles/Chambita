@@ -1,8 +1,19 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { Screen, OFERTAS, Oferta } from "../App";
 import BottomNav from "../components/BottomNav";
+import { supabase } from "../services/supabaseClient";
 
-type Props = { goTo: (s: Screen) => void; setOfertaActiva: (o: Oferta) => void; postuladas: Set<number> };
+type Props = { 
+  goTo: (s: Screen) => void; 
+  setOfertaActiva: (o: Oferta) => void; 
+  postuladas: Set<number> 
+};
+
+type PerfilUsuario = {
+  full_name: string;
+  email: string;
+  role: string;
+};
 
 const TABS = ["Todos", "Sin experiencia", "Remoto", "Temporal"];
 
@@ -15,6 +26,35 @@ const CONSEJOS_PREVIEW = [
 export default function HomeScreen({ goTo, setOfertaActiva, postuladas }: Props) {
   const [tab, setTab] = useState("Todos");
   const [notifOpen, setNotifOpen] = useState(false);
+  const [perfil, setPerfil] = useState<PerfilUsuario | null>(null);
+  const [cargandoPerfil, setCargandoPerfil] = useState(true);
+
+  // Obtener la información del usuario autenticado de Supabase
+  useEffect(() => {
+    async function obtenerUsuario() {
+      try {
+        const { data: { user } } = await supabase.auth.getUser();
+
+        if (user) {
+          const { data, error } = await supabase
+            .from("profiles")
+            .select("full_name, email, role")
+            .eq("id", user.id)
+            .single();
+
+          if (!error && data) {
+            setPerfil(data);
+          }
+        }
+      } catch (error) {
+        console.error("Error al obtener perfil:", error);
+      } finally {
+        setCargandoPerfil(false);
+      }
+    }
+
+    obtenerUsuario();
+  }, []);
 
   const filtered = OFERTAS.filter((o) => {
     if (tab === "Sin experiencia") return o.sinExperiencia;
@@ -23,36 +63,72 @@ export default function HomeScreen({ goTo, setOfertaActiva, postuladas }: Props)
     return true;
   });
 
+  // Obtener inicial para el avatar del usuario
+  const inicial = perfil?.full_name ? perfil.full_name.charAt(0).toUpperCase() : "G";
+
   return (
     <div className="flex-1 flex flex-col bg-[#F7F7FB] overflow-hidden">
       {/* Top bar */}
       <div className="bg-gradient-to-br from-[#0d1b3e] via-[#1e2f6b] to-[#3d1c6e] px-5 pt-14 pb-6">
         <div className="flex items-center justify-between mb-5">
           <div>
-            <p className="text-white/50 text-xs">¡Hola,</p>
-            <h2 className="text-white font-bold text-xl">Kely! 👋</h2>
-            <p className="text-white/40 text-xs mt-0.5">Estudiante de Contabilidad · UNSA</p>
+            {perfil ? (
+              <>
+                <p className="text-white/50 text-xs">¡Hola,</p>
+                <h2 className="text-white font-bold text-xl">{perfil.full_name}! 👋</h2>
+                <p className="text-white/40 text-xs mt-0.5">
+                  {perfil.role === "candidato" ? "Estudiante / Postulante" : "Empresa"}
+                </p>
+              </>
+            ) : (
+              <>
+                <p className="text-white/50 text-xs">¡Bienvenido a Chambita!</p>
+                <h2 className="text-white font-bold text-xl">Explora empleos 🚀</h2>
+                <button
+                  onClick={() => goTo("login")}
+                  className="text-[#2DC8A8] text-xs font-semibold mt-0.5 hover:underline"
+                >
+                  Iniciar sesión para postular →
+                </button>
+              </>
+            )}
           </div>
+
           <div className="flex items-center gap-2">
-            <button
-              onClick={() => setNotifOpen(!notifOpen)}
-              className="relative w-10 h-10 bg-white/10 rounded-full flex items-center justify-center border border-white/20"
-            >
-              <svg width="18" height="18" fill="none" viewBox="0 0 24 24" className="text-white"><path d="M18 8A6 6 0 006 8c0 7-3 9-3 9h18s-3-2-3-9M13.73 21a2 2 0 01-3.46 0" stroke="currentColor" strokeWidth="2" strokeLinecap="round"/></svg>
-              <span className="absolute top-0.5 right-0.5 w-4 h-4 bg-[#E83E8C] rounded-full text-white text-[9px] flex items-center justify-center font-bold">3</span>
-            </button>
-            <div className="w-10 h-10 bg-[#2DC8A8] rounded-full flex items-center justify-center text-white font-bold text-sm shadow">K</div>
+            {perfil ? (
+              <>
+                <button
+                  onClick={() => setNotifOpen(!notifOpen)}
+                  className="relative w-10 h-10 bg-white/10 rounded-full flex items-center justify-center border border-white/20"
+                >
+                  <svg width="18" height="18" fill="none" viewBox="0 0 24 24" className="text-white">
+                    <path d="M18 8A6 6 0 006 8c0 7-3 9-3 9h18s-3-2-3-9M13.73 21a2 2 0 01-3.46 0" stroke="currentColor" strokeWidth="2" strokeLinecap="round"/>
+                  </svg>
+                  <span className="absolute top-0.5 right-0.5 w-4 h-4 bg-[#E83E8C] rounded-full text-white text-[9px] flex items-center justify-center font-bold">3</span>
+                </button>
+                <div className="w-10 h-10 bg-[#2DC8A8] rounded-full flex items-center justify-center text-white font-bold text-sm shadow">
+                  {inicial}
+                </div>
+              </>
+            ) : (
+              <button
+                onClick={() => goTo("login")}
+                className="px-3 py-1.5 bg-white/10 border border-white/20 rounded-full text-white text-xs font-semibold"
+              >
+                Ingresar
+              </button>
+            )}
           </div>
         </div>
 
-        {/* Notif dropdown */}
-        {notifOpen && (
+        {/* Notif dropdown (solo si hay sesión activa) */}
+        {perfil && notifOpen && (
           <div className="bg-white rounded-2xl p-3 mb-4 shadow-xl">
             <p className="text-xs font-bold text-[#1a0a2e] mb-2">Notificaciones</p>
             {[
-              { msg: "Studio Contable revisó tu perfil", time: "hace 2h", color: "#6C3FA0" },
-              { msg: "Nueva vacante de Contabilidad en Arequipa", time: "hace 5h", color: "#2DC8A8" },
-              { msg: "Completa tu perfil para destacar", time: "ayer", color: "#F5A623" },
+              { msg: "Tu perfil está visible para empresas de Arequipa", time: "hace 2h", color: "#6C3FA0" },
+              { msg: "Nuevas vacantes añadidas en Arequipa", time: "hace 5h", color: "#2DC8A8" },
+              { msg: "Completa tu formación académica para destacar", time: "ayer", color: "#F5A623" },
             ].map((n, i) => (
               <div key={i} className="flex items-start gap-2.5 py-2 border-t border-[#F7F7FB]">
                 <div className="w-2 h-2 rounded-full mt-1.5 flex-shrink-0" style={{ backgroundColor: n.color }} />
@@ -68,11 +144,16 @@ export default function HomeScreen({ goTo, setOfertaActiva, postuladas }: Props)
         {/* Search */}
         <div className="flex items-center gap-2">
           <div className="flex-1 flex items-center gap-2 bg-white/12 border border-white/20 rounded-2xl px-4 py-3 backdrop-blur-sm">
-            <svg width="16" height="16" fill="none" viewBox="0 0 24 24" className="text-white/50"><circle cx="11" cy="11" r="8" stroke="currentColor" strokeWidth="2"/><path d="m21 21-4.35-4.35" stroke="currentColor" strokeWidth="2" strokeLinecap="round"/></svg>
+            <svg width="16" height="16" fill="none" viewBox="0 0 24 24" className="text-white/50">
+              <circle cx="11" cy="11" r="8" stroke="currentColor" strokeWidth="2"/>
+              <path d="m21 21-4.35-4.35" stroke="currentColor" strokeWidth="2" strokeLinecap="round"/>
+            </svg>
             <input placeholder="Buscar en Arequipa…" className="flex-1 bg-transparent text-white placeholder-white/40 text-sm outline-none" />
           </div>
           <button onClick={() => goTo("filtros")} className="w-11 h-11 bg-[#2DC8A8] rounded-2xl flex items-center justify-center flex-shrink-0 shadow-md">
-            <svg width="18" height="18" fill="none" viewBox="0 0 24 24" className="text-white"><path d="M3 6h18M7 12h10M11 18h2" stroke="currentColor" strokeWidth="2" strokeLinecap="round"/></svg>
+            <svg width="18" height="18" fill="none" viewBox="0 0 24 24" className="text-white">
+              <path d="M3 6h18M7 12h10M11 18h2" stroke="currentColor" strokeWidth="2" strokeLinecap="round"/>
+            </svg>
           </button>
         </div>
       </div>
@@ -204,14 +285,16 @@ export default function HomeScreen({ goTo, setOfertaActiva, postuladas }: Props)
                   {c.emoji}
                 </div>
                 <p className="text-sm font-medium text-[#1a0a2e]">{c.titulo}</p>
-                <svg width="16" height="16" fill="none" viewBox="0 0 24 24" className="text-gray-300 ml-auto flex-shrink-0"><path d="M9 18l6-6-6-6" stroke="currentColor" strokeWidth="2" strokeLinecap="round"/></svg>
+                <svg width="16" height="16" fill="none" viewBox="0 0 24 24" className="text-gray-300 ml-auto flex-shrink-0">
+                  <path d="M9 18l6-6-6-6" stroke="currentColor" strokeWidth="2" strokeLinecap="round"/>
+                </svg>
               </button>
             ))}
           </div>
         </div>
       </div>
 
-      <BottomNav goTo={goTo} active="home" />
+      <BottomNav goTo={goTo} active="homeUsuario" tipoUsuario={perfil?.role === "empresa" ? "empresa" : "estudiante"} />
     </div>
   );
 }
