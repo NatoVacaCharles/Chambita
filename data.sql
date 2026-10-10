@@ -119,17 +119,34 @@ CREATE TABLE public.applications (
 -- 9. TRIGGER DE SINCRONIZACIÓN DE USUARIOS CON AUTH.USERS
 -- ==========================================
 -- Función que se ejecuta cada vez que alguien se registra con Supabase Auth
+-- Reemplazar la función handle_new_user por una versión más robusta
 CREATE OR REPLACE FUNCTION public.handle_new_user()
 RETURNS trigger AS $$
+DECLARE
+  assigned_role public.user_role;
 BEGIN
+  -- 1. Asignar el rol validando el valor recibido en los metadatos
+  IF new.raw_user_meta_data->>'role' = 'empresa' THEN
+    assigned_role := 'empresa'::public.user_role;
+  ELSE
+    assigned_role := 'candidato'::public.user_role;
+  END IF;
+
+  -- 2. Insertar en la tabla profiles
   INSERT INTO public.profiles (id, email, full_name, role)
   VALUES (
     new.id,
     new.email,
-    COALESCE(new.raw_user_meta_data->>'full_name', ''),
-    COALESCE((new.raw_user_meta_data->>'role')::user_role, 'candidato')
+    COALESCE(new.raw_user_meta_data->>'full_name', 'Usuario sin nombre'),
+    assigned_role
   );
+  
   RETURN new;
+EXCEPTION
+  WHEN OTHERS THEN
+    -- Muestra en los logs de Supabase el error exacto si vuelve a fallar
+    RAISE LOG 'Error en handle_new_user: %', SQLERRM;
+    RETURN new;
 END;
 $$ LANGUAGE plpgsql SECURITY DEFINER;
 
