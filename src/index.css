@@ -1,0 +1,28 @@
+@import url('https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;500;600;700&display=swap');
+@import 'tailwindcss';
+
+@theme {
+  --font-sans: 'Poppins', system-ui, sans-serif;
+  --color-viola: #6C3FA0;
+  --color-viola-dark: #4A2880;
+  --color-viola-light: #9B6FD0;
+  --color-viola-mist: #F3EEFF;
+  --color-teal: #2DC8A8;
+  --color-teal-light: #E6FAF6;
+  --color-amber: #F5A623;
+  --color-surface: #F7F7FB;
+  --color-line: #E8E4F0;
+}
+
+html, body, #root {
+  height: 100%;
+  font-family: var(--font-sans);
+  background: #1a0a2e;
+}
+
+* { scrollbar-width: none; }
+*::-webkit-scrollbar { display: none; }
+
+input, select, textarea {
+  font-family: var(--font-sans);
+}

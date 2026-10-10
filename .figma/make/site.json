@@ -1,0 +1,11 @@
+{
+  "title": "CHAMBITA",
+  "description": "Connect job seekers with relevant opportunities, offering personalized job listings and resources to enhance their employment search.",
+  "robots": {
+    "index": false
+  },
+  "accessibility": {
+    "addBypassLinks": false,
+    "ignoreReducedMotion": false
+  }
+}
