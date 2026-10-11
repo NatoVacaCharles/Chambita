@@ -24,6 +24,7 @@ import PostulacionesEmpresaScreen from "./screens/PostulacionesEmpresaScreen";
 import NuevaConvocatoriaScreen from "./screens/NuevaConvocatoriaScreen";
 import PostuladosScreen from "./screens/PostuladosScreen";
 import DetalleCandidatoScreen from "./screens/DetalleCandidatoScreen";
+import PerfilEmpresaScreen from "./screens/PerfilEmpresaScreen";
 
 export type Screen =
   | "splash"
@@ -354,7 +355,12 @@ export default function App() {
           ) : (
             <MisPostulacionesScreen {...props} />
           ))}
-        {screen === "perfil" && <PerfilScreen {...props} />}
+        {screen === "perfil" &&
+          (tipoUsuario === "empresa" ? (
+            <PerfilEmpresaScreen {...props} />
+          ) : (
+            <PerfilScreen {...props} />
+          ))}
         {screen === "mensajeria" && <MensajeriaScreen {...props} />}
         {screen === "detalle-empresa" && <DetalleEmpresaScreen {...props} />}
         {screen === "consejos" && <ConsejosScreen {...props} />}
