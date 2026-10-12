@@ -25,6 +25,7 @@ import NuevaConvocatoriaScreen from "./screens/NuevaConvocatoriaScreen";
 import PostuladosScreen from "./screens/PostuladosScreen";
 import DetalleCandidatoScreen from "./screens/DetalleCandidatoScreen";
 import PerfilEmpresaScreen from "./screens/PerfilEmpresaScreen";
+import RecuperarContrasenaScreen from "./screens/RecuperarContrasenaScreen";
 
 export type Screen =
   | "splash"
@@ -49,7 +50,8 @@ export type Screen =
   | "configuracion"
   | "nueva-convocatoria"
   | "postulados"
-  | "detalle-candidato";
+  | "detalle-candidato"
+  | "recuperar-contrasena";
 
 export type TipoUsuario = "estudiante" | "empresa";
 
@@ -372,6 +374,7 @@ export default function App() {
         {screen === "nueva-convocatoria" && <NuevaConvocatoriaScreen {...props} />}
         {screen === "postulados" && <PostuladosScreen {...props} />}
         {screen === "detalle-candidato" && <DetalleCandidatoScreen {...props} />}
+        {screen == "recuperar-contrasena" && <RecuperarContrasenaScreen {...props} />}
       </div>
     </div>
   );

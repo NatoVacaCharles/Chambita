@@ -15,7 +15,7 @@ export default function LoginScreen({
 }: Props) {
   const [correo, setCorreo] = useState("");
   const [contrasena, setContrasena] = useState("");
-  const [mostrarContrasena, setMostrarContrasena] = useState(false); // Estado para alternar visibilidad
+  const [mostrarContrasena, setMostrarContrasena] = useState(false);
   const [loading, setLoading] = useState(false);
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
 
@@ -249,7 +249,10 @@ export default function LoginScreen({
                 )}
               </button>
             </div>
-            <button className="mt-2 ml-auto block text-xs font-medium text-[#6C3FA0]">
+            <button
+              onClick={() => goTo("recuperar-contrasena")}
+              className="mt-2 ml-auto block text-xs font-medium text-[#6C3FA0]"
+              >
               ¿Olvidaste tu contraseña?
             </button>
           </div>
