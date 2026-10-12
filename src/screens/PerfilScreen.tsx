@@ -12,6 +12,7 @@ type PerfilUsuario = {
   phone: string | null;
   role: string;
   cv_url: string | null;
+  documents_url?: string[] | null;
 };
 
 function SectionIcon({ name }: { name: string }) {
@@ -45,7 +46,7 @@ export default function PerfilScreen({ goTo }: Props) {
         if (user) {
           const { data, error } = await supabase
             .from("profiles")
-            .select("id, full_name, email, phone, role, cv_url")
+            .select("id, full_name, email, phone, role, cv_url, documents_url")
             .eq("id", user.id)
             .single();
 
@@ -69,7 +70,11 @@ export default function PerfilScreen({ goTo }: Props) {
     goTo("splash");
   };
 
-  const tieneCV = Boolean(perfil?.cv_url);
+  // Evalúa si el usuario tiene un CV o al menos un documento registrado
+  const tieneCV = Boolean(
+    perfil?.cv_url || (perfil?.documents_url && perfil.documents_url.length > 0)
+  );
+
   const completado = tieneCV ? 100 : 65;
   const inicial = perfil?.full_name ? perfil.full_name.charAt(0).toUpperCase() : "U";
 
@@ -199,10 +204,10 @@ export default function PerfilScreen({ goTo }: Props) {
       </div>
 
       <div className="flex-1 overflow-y-auto px-4 pb-4">
-        {/* Alerta de CV Pendiente */}
+        {/* Alerta de CV Pendiente - Solo se renderiza si no se ha subido ningún CV */}
         {!tieneCV && (
           <div className="bg-[#FFF8EC] border border-[#F5A623]/30 rounded-2xl px-4 py-3 flex items-center gap-3 mb-3">
-            <span className="w-9 h-9 rounded-xl bg-[#F5A623]/15 flex items-center justify-center text-[#F5A623]">
+            <span className="w-9 h-9 rounded-xl bg-[#F5A623]/15 flex items-center justify-center text-[#F5A623] shrink-0">
               <svg width="18" height="18" fill="none" viewBox="0 0 24 24">
                 <path d="M6 3h8l4 4v14H6V3Z" stroke="currentColor" strokeWidth="1.8" strokeLinejoin="round"/>
                 <path d="M14 3v5h4" stroke="currentColor" strokeWidth="1.8"/>
@@ -212,7 +217,7 @@ export default function PerfilScreen({ goTo }: Props) {
               <p className="text-[#b07010] font-semibold text-sm">Tu CV no está cargado</p>
               <p className="text-[#b07010]/70 text-xs">Las empresas lo necesitan para evaluarte</p>
             </div>
-            <button onClick={() => goTo("documentos")} className="bg-[#F5A623] text-white text-xs font-bold px-3 py-1.5 rounded-xl">
+            <button onClick={() => goTo("documentos")} className="bg-[#F5A623] text-white text-xs font-bold px-3 py-1.5 rounded-xl active:scale-95 transition-all">
               Añadir
             </button>
           </div>
@@ -227,7 +232,7 @@ export default function PerfilScreen({ goTo }: Props) {
                 i < SECCIONES.length - 1 ? "border-b border-[#E8E4F0]" : ""
               }`}
             >
-              <span className="w-9 h-9 rounded-xl bg-[#F3EEFF] flex items-center justify-center">
+              <span className="w-9 h-9 rounded-xl bg-[#F3EEFF] flex items-center justify-center shrink-0">
                 <SectionIcon name={sec.icon} />
               </span>
               <div className="flex-1 min-w-0">
@@ -235,11 +240,11 @@ export default function PerfilScreen({ goTo }: Props) {
                 <p className="text-xs text-gray-400 truncate">{sec.detalle}</p>
               </div>
               {sec.badge && (
-                <span className="text-[9px] bg-[#FFF8EC] text-[#F5A623] font-bold px-2 py-0.5 rounded-full flex-shrink-0">
+                <span className="text-[9px] bg-[#FFF8EC] text-[#F5A623] font-bold px-2 py-0.5 rounded-full shrink-0">
                   Pendiente
                 </span>
               )}
-              <svg width="16" height="16" fill="none" viewBox="0 0 24 24" className="text-gray-300 flex-shrink-0">
+              <svg width="16" height="16" fill="none" viewBox="0 0 24 24" className="text-gray-300 shrink-0">
                 <path d="M9 18l6-6-6-6" stroke="currentColor" strokeWidth="2" strokeLinecap="round"/>
               </svg>
             </button>
@@ -248,7 +253,7 @@ export default function PerfilScreen({ goTo }: Props) {
 
         <button
           onClick={handleLogout}
-          className="w-full border-2 border-red-100 text-red-500 font-semibold py-3 rounded-2xl text-sm hover:bg-red-50 transition-colors"
+          className="w-full border-2 border-red-100 text-red-500 font-semibold py-3 rounded-2xl text-sm hover:bg-red-50 transition-colors active:scale-98"
         >
           Cerrar sesión
         </button>

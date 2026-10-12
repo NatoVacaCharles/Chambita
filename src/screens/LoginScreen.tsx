@@ -37,43 +37,11 @@ export default function LoginScreen({
           password: contrasena,
         });
 
-      /*if (authError) {
-        throw new Error("Credenciales incorrectas. Verifica tu correo y contraseña.");
-      }*/
-     // Reemplaza esta parte en LoginScreen.tsx
       if (authError) {
         console.error("Error completo de Supabase Auth:", authError);
         throw new Error(`Auth Error: ${authError.message}`);
       }
 
-      /*
-      if (authData.user) {
-        // 2. Verificar el perfil y rol del usuario en la base de datos
-        const { data: profile, error: profileError } = await supabase
-          .from("profiles")
-          .select("role")
-          .eq("id", authData.user.id)
-          .single();
-
-        if (profileError) {
-          throw new Error("No se pudo obtener la información de perfil.");
-        }
-
-        const rolEsperado = tipoUsuario === "estudiante" ? "candidato" : "empresa";
-
-        if (profile.role !== rolEsperado) {
-          await supabase.auth.signOut();
-          throw new Error(
-            `Esta cuenta está registrada como ${profile.role}. Por favor cambia la pestaña a "Soy ${
-              profile.role === "candidato" ? "estudiante" : "empresa"
-            }".`
-          );
-        }
-
-        // 3. Redirección exitosa según el rol
-        goTo("home");
-      }
-        */
        if (authData.user) {
           const { data: profile, error: profileError } =
             await supabase

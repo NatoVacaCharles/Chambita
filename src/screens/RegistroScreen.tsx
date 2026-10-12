@@ -1,6 +1,6 @@
 import { useState } from "react";
 import { Screen, TipoUsuario } from "../App";
-import { supabase } from "../services/supabaseClient"; // Ajusta la ruta a tu cliente de Supabase si varía
+import { supabase } from "../services/supabaseClient";
 
 type Props = {
   goTo: (s: Screen) => void;
@@ -25,6 +25,10 @@ export default function RegistroScreen({ goTo, tipoUsuario }: Props) {
   const [form, setForm] = useState<Record<string, string>>({});
   const [loading, setLoading] = useState(false);
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
+  
+  // Estado para visibilidad de la contraseña y modal emergente
+  const [mostrarContrasena, setMostrarContrasena] = useState(false);
+  const [mostrarModalExito, setMostrarModalExito] = useState(false);
 
   const esEmpresa = tipoUsuario === "empresa";
   const campos = esEmpresa ? camposEmpresa : camposEstudiante;
@@ -41,7 +45,7 @@ export default function RegistroScreen({ goTo, tipoUsuario }: Props) {
     }
 
     // Validar longitud mínima de contraseña
-    if (form.contrasena.length < 6) {
+    if (!form.contrasena || form.contrasena.length < 6) {
       setErrorMessage("La contraseña debe tener al menos 6 caracteres.");
       return;
     }
@@ -92,7 +96,6 @@ export default function RegistroScreen({ goTo, tipoUsuario }: Props) {
               {
                 profile_id: user.id,
                 company_name: form.nombreEmpresa.trim(),
-                phone: form.celular.trim(),
               },
             ]);
 
@@ -101,9 +104,8 @@ export default function RegistroScreen({ goTo, tipoUsuario }: Props) {
           }
         }
 
-        // 5. Redireccionar según el rol
-        //goTo(esEmpresa ? "home" : "completar-perfil");
-        goTo("login");
+        // 5. Mostrar modal de éxito
+        setMostrarModalExito(true);
       }
     } catch (err: any) {
       setErrorMessage(err.message || "Ocurrió un error al registrar la cuenta.");
@@ -145,24 +147,74 @@ export default function RegistroScreen({ goTo, tipoUsuario }: Props) {
         )}
 
         <div className="flex flex-col gap-4">
-          {campos.map(({ key, label, type, placeholder }) => (
-            <div key={key}>
-              <label className="text-xs font-medium text-gray-500 mb-1.5 block">
-                {label}
-              </label>
-              <div className="flex items-center border border-[#E8E4F0] rounded-xl px-4 py-3 focus-within:border-[#6C3FA0] transition-colors">
-                <input
-                  type={type}
-                  placeholder={placeholder}
-                  value={form[key] ?? ""}
-                  onChange={(e) =>
-                    setForm({ ...form, [key]: e.target.value })
-                  }
-                  className="flex-1 text-sm text-[#1a0a2e] placeholder-gray-300 outline-none bg-transparent"
-                />
+          {campos.map(({ key, label, type, placeholder }) => {
+            const esContrasena = key === "contrasena";
+            const inputType = esContrasena
+              ? mostrarContrasena
+                ? "text"
+                : "password"
+              : type;
+
+            return (
+              <div key={key}>
+                <label className="text-xs font-medium text-gray-500 mb-1.5 block">
+                  {label}
+                </label>
+                <div className="flex items-center border border-[#E8E4F0] rounded-xl px-4 py-3 focus-within:border-[#6C3FA0] transition-colors bg-white">
+                  <input
+                    type={inputType}
+                    placeholder={placeholder}
+                    value={form[key] ?? ""}
+                    onChange={(e) =>
+                      setForm({ ...form, [key]: e.target.value })
+                    }
+                    className="flex-1 text-sm text-[#1a0a2e] placeholder-gray-300 outline-none bg-transparent"
+                  />
+
+                  {/* Botón para Mostrar/Ocultar Contraseña */}
+                  {esContrasena && (
+                    <button
+                      type="button"
+                      onClick={() => setMostrarContrasena(!mostrarContrasena)}
+                      className="text-gray-400 hover:text-[#6C3FA0] transition-colors p-1"
+                      aria-label="Ver u ocultar contraseña"
+                    >
+                      {mostrarContrasena ? (
+                        /* Ícono de Ojo Abierto */
+                        <svg width="20" height="20" fill="none" viewBox="0 0 24 24">
+                          <path
+                            d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"
+                            stroke="currentColor"
+                            strokeWidth="1.8"
+                            strokeLinecap="round"
+                            strokeLinejoin="round"
+                          />
+                          <circle
+                            cx="12"
+                            cy="12"
+                            r="3"
+                            stroke="currentColor"
+                            strokeWidth="1.8"
+                          />
+                        </svg>
+                      ) : (
+                        /* Ícono de Ojo Tachado */
+                        <svg width="20" height="20" fill="none" viewBox="0 0 24 24">
+                          <path
+                            d="M17.94 17.94A10.07 10.07 0 0 1 12 20c-7 0-11-8-11-8a18.45 18.45 0 0 1 5.06-5.94M9.9 4.24A9.12 9.12 0 0 1 12 4c7 0 11 8 11 8a18.5 18.5 0 0 1-2.16 3.19m-6.72-1.07a3 3 0 1 1-4.24-4.24M1 1l22 22"
+                            stroke="currentColor"
+                            strokeWidth="1.8"
+                            strokeLinecap="round"
+                            strokeLinejoin="round"
+                          />
+                        </svg>
+                      )}
+                    </button>
+                  )}
+                </div>
               </div>
-            </div>
-          ))}
+            );
+          })}
         </div>
 
         <button
@@ -172,6 +224,7 @@ export default function RegistroScreen({ goTo, tipoUsuario }: Props) {
         >
           {loading ? "Creando cuenta..." : "Crear cuenta"}
         </button>
+
         <p className="text-center text-xs text-gray-400 mt-4">
           ¿Ya tienes cuenta?{" "}
           <button
@@ -182,6 +235,38 @@ export default function RegistroScreen({ goTo, tipoUsuario }: Props) {
           </button>
         </p>
       </div>
+
+      {/* Modal Emergente de Éxito */}
+      {mostrarModalExito && (
+        <div className="fixed inset-0 bg-black/50 backdrop-blur-xs flex items-center justify-center z-50 p-6 animate-fadeIn">
+          <div className="bg-white w-full max-w-sm rounded-3xl p-6 text-center shadow-2xl flex flex-col items-center">
+            {/* Ícono de Check Verde */}
+            <div className="w-16 h-16 bg-[#E6FAF6] text-[#239b83] rounded-2xl flex items-center justify-center mb-4">
+              <svg width="32" height="32" fill="none" viewBox="0 0 24 24">
+                <path
+                  d="M20 6L9 17l-5-5"
+                  stroke="currentColor"
+                  strokeWidth="2.5"
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                />
+              </svg>
+            </div>
+
+            <h3 className="text-lg font-bold text-[#1a0a2e]">¡Registro exitoso!</h3>
+            <p className="text-xs text-gray-500 mt-2 mb-6 leading-relaxed">
+              Cuenta creada exitosamente, ya puede registrarse
+            </p>
+
+            <button
+              onClick={() => goTo("login")}
+              className="w-full bg-[#6C3FA0] text-white font-semibold py-3.5 rounded-2xl text-sm active:scale-95 transition-all shadow-md"
+            >
+              Continuar
+            </button>
+          </div>
+        </div>
+      )}
     </div>
   );
 }
